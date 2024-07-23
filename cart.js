@@ -1,145 +1,108 @@
-let label = document.getElementById('label');
-let shoppingCart = document.getElementById('shopping-cart');
+// Get elements
+const label = document.getElementById('label');
+const shoppingCart = document.getElementById('shopping-cart');
+const cartIcon = document.getElementById("cartAmount");
 
-
-//updating basket
+// Retrieve basket data from localStorage
 let basket = JSON.parse(localStorage.getItem("data")) || [];
 
-let calculation = ()=>{
-    let cartIcon = document.getElementById("cartAmount");
-    cartIcon.innerHTML = basket.map((x)=>x.item).reduce((x,y)=>x+y,0);
-}
-calculation()
+// Update cart icon count
+const updateCartIcon = () => {
+    const itemCount = basket.reduce((total, item) => total + item.item, 0);
+    cartIcon.innerHTML = itemCount;
+};
+updateCartIcon();
 
-let generateCartItems = () => {
-    if (basket.length !== 0){
-        return (shoppingCart.innerHTML = basket.map((x) => {
-            let {id, item} = x;
-            let search = shopItemsData.find((y) => y.id === id) || [];
-            let {img, name, price} = search
+// Generate cart items
+const generateCartItems = () => {
+    if (basket.length !== 0) {
+        shoppingCart.innerHTML = basket.map(({ id, item }) => {
+            const product = shopItemsData.find(product => product.id === id) || {};
+            const { img, name, price } = product;
             return `
             <div class="cart-item">
-                <img width="120" src=${img} alt=""/>
-
+                <img width="120" src=${img} alt="${name}" />
                 <div class="details">
                     <div class="title-price-x">
                         <h4 class="title-price">
                             <p>${name}</p>
-                            <p class="cart-item-prie">R ${price}</p>
+                            <p class="cart-item-price">R ${price}</p>
                         </h4>
-                        
                     </div>
-
                     <div class="buttons">
-                        <span onclick="decrement(${id})" class="minus">-</span>
-
-                        <div id=${id} class="quatinty">
-                        ${item}</div>
-
-                        <span onclick="increment(${id})" class="plus">+</span>
-                        
+                        <span onclick="changeItemQuantity(${id}, 'decrement')" class="minus">-</span>
+                        <div id=${id} class="quantity">${item}</div>
+                        <span onclick="changeItemQuantity(${id}, 'increment')" class="plus">+</span>
                     </div>
-
-                    <h3>
-                    R ${item * search.price}
-                    </h3>
-
+                    <h3>R ${item * price}</h3>
                     <span onclick="removeItem(${id})" class="i-x">X</span>
-
                 </div>
-            </div>
-            `;
-        }).join(''));
-    }
-    else {
-        shoppingCart.innerHTML = ``;
+            </div>`;
+        }).join('');
+    } else {
+        shoppingCart.innerHTML = '';
         label.innerHTML = `
         <h2>Cart is empty</h2>
         <a href="shop.html">
-        <button class="HomeBtn">Back to home</button>
-        </a>
-        `;
+            <button class="HomeBtn">Back to home</button>
+        </a>`;
     }
 };
 
 generateCartItems();
 
+// Change item quantity
+const changeItemQuantity = (id, action) => {
+    const product = basket.find(item => item.id === id);
 
-let increment = (id) => {
-    let selectedItem = id;
-//checking if id exists in basket
-    let search = basket.find((x) => x.id === selectedItem.id);
+    if (!product) return;
 
-    if(search === undefined){
-        basket.push({
-            id: selectedItem.id,
-            item: 1,
-        });
-    } else {
-        search.item += 1;
+    if (action === 'increment') {
+        product.item += 1;
+    } else if (action === 'decrement' && product.item > 0) {
+        product.item -= 1;
     }
-    
-    generateCartItems();
-    update(selectedItem.id);
+
+    basket = basket.filter(item => item.item !== 0);
     localStorage.setItem("data", JSON.stringify(basket));
-};
-
-let decrement = (id) => {
-    let selectedItem = id;
-
-    //checking if id exists in basket
-        let search = basket.find((x) => x.id === selectedItem.id);
-
-        if(search === undefined) return
-        else if(search.item === 0) return;
-        else {search.item -= 1;}
-
-        update(selectedItem.id);
-        basket = basket.filter((x) => x.item !== 0);
-        generateCartItems();
-        localStorage.setItem("data", JSON.stringify(basket));
-};
-let update = (id) => {
-    let search = basket.find((x)=> x.id === id);
-    //console.log(search.item);
-    document.getElementById(id).innerHTML = search.item;
-    calculation();
-    totalAmount();
-};
-
-let removeItem = (id)=>{
-    let selectedItem = id
-    //console.log(selectedItem.id);
-    basket = basket.filter((x)=>x.id !== selectedItem.id);
     generateCartItems();
-    totalAmount();
-    calculation();
-    localStorage.setItem("data", JSON.stringify(basket));
+    updateCartIcon();
+    updateTotalAmount();
 };
 
-let clearCart = () => {
-    basket = []
-    generateCartItems();
-    calculation();
+// Remove item from cart
+const removeItem = (id) => {
+    basket = basket.filter(item => item.id !== id);
     localStorage.setItem("data", JSON.stringify(basket));
+    generateCartItems();
+    updateCartIcon();
+    updateTotalAmount();
+};
 
-}
+// Clear cart
+const clearCart = () => {
+    basket = [];
+    localStorage.setItem("data", JSON.stringify(basket));
+    generateCartItems();
+    updateCartIcon();
+    updateTotalAmount();
+};
 
-let totalAmount = ()=>{
-    if(basket.length !== 0){
-        let amount = basket.map((x)=>{
-            let {id, item} = x;
-            let search = shopItemsData.find((y) => y.id === id) || [];
-            return item * search.price;
-        }).reduce((x,y) => x + y, 0);
-        //console.log(amount)
+// Update total amount
+const updateTotalAmount = () => {
+    if (basket.length !== 0) {
+        const total = basket.reduce((sum, { id, item }) => {
+            const product = shopItemsData.find(product => product.id === id) || {};
+            return sum + (item * product.price);
+        }, 0);
         label.innerHTML = `
-        <h2>Subtotal : R${amount}</h2>
+        <h2>Subtotal: R${total}</h2>
         <button class="checkout">CHECKOUT</button>
         <br>
-        <button onclick="clearCart()" class="removeAll">Clear cart</button>
-        `;
-    } else return
-}
+        <button onclick="clearCart()" class="removeAll">Clear cart</button>`;
+    } else {
+        label.innerHTML = '';
+    }
+};
 
-totalAmount();
+updateTotalAmount();
